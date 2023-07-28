@@ -12,13 +12,13 @@ class Test(views.APIView):
 class CF(views.APIView):
     def post(self, request):
         task = recommend_task.delay(request.data)
-        return Response({"task_id": task.id}, status=202)
+        return Response({"taskId": task.id}, status=202)
 
-def get_task_status(request, task_id: str):
-    task_result = AsyncResult(task_id)
+def get_task_status(request, taskId: str):
+    task_result = AsyncResult(taskId)
     result = {
-        "task_id": task_id,
-        "task_status": task_result.status,
-        "task_result": task_result.result,
+        "taskId": taskId,
+        "taskStatus": task_result.status,
+        "data": task_result.result["data"],
     }
     return JsonResponse(result, status=200)
