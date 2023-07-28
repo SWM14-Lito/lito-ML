@@ -127,10 +127,25 @@ class Translator:
 
         r, c = wrong_cnt_matrix.shape
         for userId in range(r):
+            recommend_count = 0
+            skipped = []
             for problemId in range(c):
                 if solved_matrix[userId][problemId]:
+                    skipped.append((problemId, wrong_cnt_matrix[userId][problemId]))
                     continue
                 if wrong_cnt_matrix[userId][problemId] > 0:
+                    json_form = dict()
+                    json_form[self.json_userId] = userId
+                    json_form[self.json_problemId] = problemId
+                    content[self.json_data].append(json_form)
+                    recommend_count += 1
+            
+            if recommend_count < 3:
+                skipped.sort(key=lambda x: x[1], reverse = True)
+
+                for i in range(3-recommend_count):
+                    problemId, _ = skipped[i]
+
                     json_form = dict()
                     json_form[self.json_userId] = userId
                     json_form[self.json_problemId] = problemId
