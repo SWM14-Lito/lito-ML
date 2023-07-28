@@ -24,23 +24,22 @@ def recommend_task(data):
     epochs = 200
     verbose = True
     print_results = False
-    for_test = True
-    test_user_num = 1000
-    test_problem_num = 500
+    for_test = False
+    test_user_num = 100
+    test_problem_num = 100
 
     start_time = datetime.now()
     print("cf start - " + str(start_time))
 
 
     traslator = Translator(data, for_test, test_user_num, test_problem_num)
-    R = traslator.translateFromJson()
+    R, solved_matrix = traslator.translateFromJson()
 
     factorizer = MatrixFactorization(
         R, k=k, learning_rate=lr, reg_param=reg, epochs=epochs, verbose=verbose
     )
     factorizer.fit()
     predicted_matrix = factorizer.final_matrix()
-    valid_cell = factorizer.get_valid_cell()
 
     if print_results:
         factorizer.print_results()
@@ -49,7 +48,7 @@ def recommend_task(data):
     print("cf end - " + str(end_time))
     print("total time - " + str((end_time-start_time).total_seconds()))
 
-    return traslator.translateToJson(predicted_matrix, valid_cell)
+    return traslator.translateToJson(predicted_matrix, solved_matrix)
 
 
 
@@ -63,42 +62,47 @@ class Translator:
         self.json_maxProblemId = "maxProblemId"
         self.json_data = "data"
         self.json_userId = "userId"
-        self.json_problemId = "problem_id"
+        self.json_problemId = "problemId"
         self.json_problemStatus = "problemStatus"
-        self.json_unsolved = "unsolved"
-        self.json_correct = "correct"
-        self.json_incorrect = "incorrect"
+        self.json_unsolvedCnt = "unsolvedCnt"
+        self.json_success = "SUCCESS"
+        self.json_process = "PROCESS"
         self.json_unknown = "unknown"
 
+    # 테스트 데이터 생성
     def testDataMaker(self):
         content = dict()
         content[self.json_data] = []
         content[self.json_maxUserId] = self.test_user_num
         content[self.json_maxProblemId] = self.test_problem_num
 
-
         for userId in range(self.test_user_num):
             for problemId in range(self.test_problem_num):
-                json_form = dict()
-                json_form[self.json_userId] = userId
-                json_form[self.json_problemId] = problemId
-                json_form[self.json_problemStatus] = self.randomState()
-                content[self.json_data].append(json_form)
+                jform = dict()
+                jform[self.json_userId] = userId
+                jform[self.json_problemId] = problemId
+                jform[self.json_problemStatus] = self.randomProblemStatus()
+                jform[self.json_unsolvedCnt] = self.randomUnsolvedCnt()
+
+                content[self.json_data].append(jform)
 
         return content
 
-    def randomState(self):
-        ranVal = random.randrange(3)
+    # (테스트 데이터용) 맞췄는지, 풀이중인지 랜덤 반환
+    def randomProblemStatus(self):
+        ranVal = random.randrange(2)
         if ranVal == 0:
-            return self.json_unsolved
-        elif ranVal == 1:
-            return self.json_correct
+            return self.json_success
         else:
-            return self.json_incorrect
+            return self.json_process
 
+    # (테스트 데이터용) 틀린 횟수 랜덤 반환
+    def randomUnsolvedCnt(self):
+        ranVal = random.randrange(10)
+        return ranVal
 
+    # Json 데이터를 행렬로 변환
     def translateFromJson(self):
-
         if self.for_test:
             content = self.testDataMaker()
         else:
@@ -107,40 +111,32 @@ class Translator:
         user_count = content[self.json_maxUserId]
         problem_count = content[self.json_maxProblemId]
 
-        data = np.array(content[self.json_data])
-        matrix = np.zeros(shape=(user_count, problem_count))
+        solve_status_lst = np.array(content[self.json_data])
+        wrong_cnt_matrix = np.zeros(shape=(user_count, problem_count))
+        solved_matrix = np.zeros((user_count, problem_count), dtype=bool)
 
-        for d in data:
-            matrix_value = self.json_problemStatus_to_num(d[self.json_problemStatus])
-            matrix[d[self.json_userId] - 1][d[self.json_problemId] - 1] = matrix_value
+        for ss in solve_status_lst:
+            wrong_cnt_matrix[ss[self.json_userId] - 1][ss[self.json_problemId] - 1] = ss[self.json_unsolvedCnt]
+            solved_matrix[ss[self.json_userId] - 1][ss[self.json_problemId] - 1] = True
 
-        return matrix
+        return wrong_cnt_matrix, solved_matrix
 
-    def translateToJson(self, matrix, valid_cell):
-
+    # 행렬을 Json 데이터로 변환
+    def translateToJson(self, wrong_cnt_matrix, solved_matrix):
         content = {self.json_data: []}
 
-        r, c = matrix.shape
+        r, c = wrong_cnt_matrix.shape
         for userId in range(r):
             for problemId in range(c):
-                if (userId, problemId) in valid_cell:
+                if solved_matrix[userId][problemId]:
+                    continue
+                if wrong_cnt_matrix[userId][problemId] > 0:
                     json_form = dict()
                     json_form[self.json_userId] = userId
                     json_form[self.json_problemId] = problemId
                     content[self.json_data].append(json_form)
 
         return content
-
-    def json_problemStatus_to_num(self, problemStatus):
-        if problemStatus == self.json_unsolved:
-            return 0
-        elif problemStatus == self.json_correct:
-            return 1
-        elif problemStatus == self.json_incorrect:
-            return 2
-        else:
-            return -1
-
 
 class MatrixFactorization:
     def __init__(self, R, k, learning_rate, reg_param, epochs, verbose=False):
@@ -244,23 +240,11 @@ class MatrixFactorization:
         return np.round(matrix, 0)
 
     def limiting(self, matrix):
-        matrix = np.where(matrix > 2, 2, matrix)
-        matrix = np.where(matrix < 1, 1, matrix)
+        matrix = np.where(matrix < 0, 0, matrix)
         return matrix
 
     def final_matrix(self):
         return self.limiting(self.rounding(self.get_complete_matrix()))
-
-    def get_valid_cell(self):
-        valid = dict()
-
-        fm = self.final_matrix()
-        r, c = self._R.shape
-        for userId in range(r):
-            for problemId in range(c):
-                if self._R[userId][problemId] == 0 and fm[userId][problemId] == 2:
-                    valid[(userId, problemId)] = True
-        return valid
 
     def print_results(self):
         print()
