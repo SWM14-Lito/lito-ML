@@ -16,9 +16,17 @@ class CF(views.APIView):
 
 def get_task_status(request, taskId: str):
     task_result = AsyncResult(taskId)
-    result = {
-        "taskId": taskId,
-        "taskStatus": task_result.status,
-        "data": task_result.result["data"],
-    }
+
+    if task_result.result is None:
+        result = {
+            "taskId": taskId,
+            "taskStatus": task_result.status,
+            "data": [],
+        }
+    else:
+        result = {
+            "taskId": taskId,
+            "taskStatus": task_result.status,
+            "data": task_result.result["data"],
+        }
     return JsonResponse(result, status=200)
