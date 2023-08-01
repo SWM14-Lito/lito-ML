@@ -1,20 +1,8 @@
 
-from typing import List
 from celery import shared_task
-import time
-import json
-import requests
 import numpy as np
 import random
 from datetime import datetime
-
-
-@shared_task
-def test_task(a: int, b: int):
-    print("test Celery task start!")
-    time.sleep(10)
-    print("test Celery task : ", a + b)
-    return a + b
 
 @shared_task
 def recommend_task(data):
