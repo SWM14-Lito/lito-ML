@@ -135,8 +135,8 @@ class Translator:
                     continue
                 if wrong_cnt_matrix[userId][problemId] > 0:
                     json_form = dict()
-                    json_form[self.json_userId] = userId
-                    json_form[self.json_problemId] = problemId
+                    json_form[self.json_userId] = userId+1
+                    json_form[self.json_problemId] = problemId+1
                     content[self.json_data].append(json_form)
                     recommend_count += 1
             
@@ -147,8 +147,8 @@ class Translator:
                     problemId, _ = skipped[i]
 
                     json_form = dict()
-                    json_form[self.json_userId] = userId
-                    json_form[self.json_problemId] = problemId
+                    json_form[self.json_userId] = userId+1
+                    json_form[self.json_problemId] = problemId+1
                     content[self.json_data].append(json_form)
 
         return content
