@@ -127,6 +127,8 @@ class Translator:
                     json_form[self.json_problemId] = problemId+1
                     content[self.json_data].append(json_form)
                     recommend_count += 1
+                else:
+                    skipped.append((problemId, wrong_cnt_matrix[userId][problemId]))
             
             if recommend_count < 3:
                 skipped.sort(key=lambda x: x[1], reverse = True)
