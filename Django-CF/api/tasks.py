@@ -104,6 +104,10 @@ class Translator:
         solved_matrix = np.zeros((user_count, problem_count), dtype=bool)
 
         for ss in solve_status_lst:
+            if ss[self.json_userId] > user_count or ss[self.json_problemId] > problem_count:
+                wrong_cnt_matrix = np.zeros(shape=(0, 0))
+                solved_matrix = np.zeros((0, 0), dtype=bool)
+                break 
             wrong_cnt_matrix[ss[self.json_userId] - 1][ss[self.json_problemId] - 1] = ss[self.json_unsolvedCnt]
             solved_matrix[ss[self.json_userId] - 1][ss[self.json_problemId] - 1] = True
 
@@ -133,7 +137,7 @@ class Translator:
             if recommend_count < 3:
                 skipped.sort(key=lambda x: x[1], reverse = True)
 
-                for i in range(3-recommend_count):
+                for i in range(min(3, c)-recommend_count):
                     problemId, _ = skipped[i]
 
                     json_form = dict()
