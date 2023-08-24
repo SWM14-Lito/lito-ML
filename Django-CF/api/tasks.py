@@ -134,16 +134,20 @@ class Translator:
                 else:
                     skipped.append((problemId, wrong_cnt_matrix[userId][problemId]))
             
-            if recommend_count < 3:
-                skipped.sort(key=lambda x: x[1], reverse = True)
+                if recommend_count == 3:
+                    break
 
-                for i in range(min(3, c)-recommend_count):
-                    problemId, _ = skipped[i]
+            # # 안푼거 3개가 안되면 푼거 중에 많이 틀린 것도 추천에 추가
+            # if recommend_count < 3:
+            #     skipped.sort(key=lambda x: x[1], reverse = True)
 
-                    json_form = dict()
-                    json_form[self.json_userId] = userId+1
-                    json_form[self.json_problemId] = problemId+1
-                    content[self.json_data].append(json_form)
+            #     for i in range(min(3, c)-recommend_count):
+            #         problemId, _ = skipped[i]
+
+            #         json_form = dict()
+            #         json_form[self.json_userId] = userId+1
+            #         json_form[self.json_problemId] = problemId+1
+            #         content[self.json_data].append(json_form)
 
         return content
 
