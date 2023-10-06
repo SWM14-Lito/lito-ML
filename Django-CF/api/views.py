@@ -25,3 +25,6 @@ def get_task_status(request, taskId: str):
             "data": task_result.result["data"],
         }
     return JsonResponse(result, status=200)
+
+def get_connection_status(request):
+    return JsonResponse({"health": "OK"}, status=200)
